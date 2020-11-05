@@ -1,0 +1,5 @@
+QLDBs/
+TESTING_REPOS/
+.cache/*
+
+*_temp.csv
