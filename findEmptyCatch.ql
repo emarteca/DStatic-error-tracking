@@ -1,21 +1,23 @@
 import java
 
-predicate locContained(Location toCheck, Location cont) {
- 	(cont.getStartLine() < toCheck.getStartLine() or 
-      		(cont.getStartLine() = toCheck.getStartLine() and cont.getStartColumn() < toCheck.getStartColumn()))
-  and 
-  	(cont.getEndLine() > toCheck.getEndLine() or 
-      		(cont.getEndLine() = toCheck.getEndLine() and cont.getEndColumn() > toCheck.getEndColumn()))
-  and 
-  cont.getFile() = toCheck.getFile()
+bindingset[cStartLine, cStartCol, tcStartLine,tcStartCol]
+predicate startContained(int tcStartLine, int tcStartCol, int cStartLine, int cStartCol) {
+	cStartLine < tcStartLine or 
+      		(cStartLine = tcStartLine and cStartCol < tcStartCol)
+}
+
+bindingset[cEndLine, cEndCol, tcEndLine,tcEndCol]
+predicate endContained(int tcEndLine, int tcEndCol, int cEndLine, int cEndCol) {
+	cEndLine > tcEndLine or 
+      		(cEndLine = tcEndLine and cEndCol > tcEndCol)
 }
 
 predicate emptyBlock(Block b) {
 	b.getNumStmt() = 0
 }
 
-predicate blockHasOnlyLogging(Block b) {
-	forall( Expr c | c.getAnEnclosingStmt() = b.getAStmt() | 
+predicate catchHasOnlyLogging(CatchClause cc) {
+	forall( Expr c | c.getAnEnclosingStmt() = cc.getBlock().getAStmt() | 
 					c instanceof MethodAccess and 
 					c.(MethodAccess).getMethod().getQualifiedName().matches("PrintStream.print%")) // gets System.out.print (and ..ln)
 }
@@ -38,10 +40,10 @@ predicate hasSystemExitMethod(Block b) {
 }
 
 // bad exits: System.exit or abort
-predicate blockHasBadExit(Block b) {
-	exists( Call c | c = b.getAStmt() and c.getCallee().getName() = "abort")
+predicate catchHasBadExit(CatchClause cc) {
+	exists( Call c | c = cc.getBlock().getAStmt() and c.getCallee().getName() = "abort")
 	or
-	hasSystemExitMethod(b)
+	hasSystemExitMethod(cc.getBlock())
 }
 
 predicate catchHasGeneralException(CatchClause c) {
@@ -79,18 +81,28 @@ private Type getAThrownExceptionType(TryStmt t) {
 
 
 // bad comment == one with TODO or FIXME 
-predicate blockHasBadComment(Block b) {
-	exists( JavadocText jdc | (jdc.getText().matches("%TODO%") or jdc.getText().matches("%FIXME%")) and locContained(jdc.getLocation(), b.getLocation())) 
+predicate catchHasBadComment(CatchClause c) {
+	exists( JavadocText jdc | jdc.getFile() = c.getFile() and 
+				 (jdc.getText().matches("%TODO%") or jdc.getText().matches("%FIXME%")) and 
+				 startContained(jdc.getLocation().getStartLine(), jdc.getLocation().getStartColumn(), 
+				 	c.getLocation().getStartLine(), c.getLocation().getStartColumn()) and
+				 endContained(jdc.getLocation().getEndLine(), jdc.getLocation().getEndColumn(), 
+				 	c.getLocation().getEndLine(), c.getLocation().getEndColumn())) 
 }
 
 predicate isBadCatch(CatchClause c) {
   emptyBlock( c.getBlock()) or
-  blockHasOnlyLogging( c.getBlock()) or
-  // blockHasBadComment( c.getBlock()) or
-  (catchHasGeneralException(c) and blockHasBadExit(c.getBlock()))  
+  catchHasOnlyLogging( c) or
+  catchHasBadComment( c) or
+  (catchHasGeneralException(c) and catchHasBadExit(c))  
 }
 
 from CatchClause c
+// where exists(JavadocText jdc | jdc.getFile() = c.getBlock().getFile() and 
+				 // (jdc.getText().matches("%TODO%") or jdc.getText().matches("%FIXME%"))and 
+				 // //locContained(jdc.getLocation(), c.getLocation()))
+				 // startContained(jdc.getLocation().getStartLine(), jdc.getLocation().getStartColumn(), 
+				 // 	c.getLocation().getStartLine(), c.getLocation().getStartColumn()))
+// where isBadCatch(c)
 where isBadCatch(c)
-// (jdc.getText().matches("%TODO%") or jdc.getText().matches("%FIXME%")) and locContained(jdc.getLocation(), c.getBlock().getLocation())
 select c, c.getFile(), c.getLocation()
