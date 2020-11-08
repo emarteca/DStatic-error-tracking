@@ -79,6 +79,13 @@ private Type getAThrownExceptionType(TryStmt t) {
   )
 }
 
+class LeaveStmt extends Stmt {
+	LeaveStmt() {
+		this instanceof ReturnStmt or
+		this instanceof ContinueStmt or 
+		this instanceof ThrowStmt
+	}
+}
 
 // bad comment == one with TODO or FIXME 
 predicate catchHasBadComment(CatchClause c) {
@@ -95,6 +102,31 @@ predicate isBadCatch(CatchClause c) {
   catchHasOnlyLogging( c) or
   catchHasBadComment( c) or
   (catchHasGeneralException(c) and catchHasBadExit(c))  
+}
+
+predicate varModifiedInBlock(Variable v, Block b) {
+	exists(AssignExpr ae | ae.getAnEnclosingStmt() = b and ae.getDest() = v.getAnAccess())
+}
+
+ConditionalStmt condCheckingVar(Variable v) {
+	result.getCondition() = v.getAnAccess()
+}
+
+predicate stmtInBB(BasicBlock b, Stmt s) {
+	exists(BasicBlock innerB | b.bbDominates(innerB) and s.getBasicBlock() = b)
+}
+
+predicate okEmptyCatch(CatchClause c) {
+	emptyBlock(c.getBlock()) 
+	and 
+	(
+		// last statement of try is continue, throw, or return _and_ next basic block is not empty
+		c.getTry().getBlock().(Block).getLastStmt() instanceof LeaveStmt and c.getTry().getBasicBlock().getABBSuccessor().length() > 1
+		or
+		// theres a variable modified in the try that is checked in the next basic block
+		exists(Variable v | varModifiedInBlock(v, c.getTry().getBlock()) 
+			and stmtInBB(c.getTry().getBasicBlock().getABBSuccessor(), condCheckingVar(v)))
+	)
 }
 
 from CatchClause c
