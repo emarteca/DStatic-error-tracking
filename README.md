@@ -7,5 +7,9 @@ Specifically, it emits warnings if:
 * catch catches a higher level exception like `Exception` and `Throwable` and also calls `abort` or `System.exit` -- done (also looking for `halt`)
 
 And, it does _not_ emit a warning if:
-* an empty catch block has a corresponding try that modifies the value of a local variable _and_ that variable is checked in the basic block after the catch
-* an empty catch block has a corresponding try that has `return`, `continue`, or `throw` as the last statement _and_ the basic block after the catch is not empty
+* an empty catch block has a corresponding try that modifies the value of a local variable _and_ that variable is checked in the basic block after the catch -- done
+* an empty catch block has a corresponding try that has `return`, `continue`, or `throw` as the last statement _and_ the basic block after the catch is not empty -- done
+
+### Tested with
+* hbase
+* tomcat

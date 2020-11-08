@@ -135,6 +135,6 @@ from CatchClause c
 				 // //locContained(jdc.getLocation(), c.getLocation()))
 				 // startContained(jdc.getLocation().getStartLine(), jdc.getLocation().getStartColumn(), 
 				 // 	c.getLocation().getStartLine(), c.getLocation().getStartColumn()))
-// where isBadCatch(c)
-where isBadCatch(c)
+where isBadCatch(c) 
+and not okEmptyCatch(c)
 select c, c.getFile(), c.getLocation()
