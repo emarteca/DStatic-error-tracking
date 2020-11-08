@@ -130,11 +130,5 @@ predicate okEmptyCatch(CatchClause c) {
 }
 
 from CatchClause c
-// where exists(JavadocText jdc | jdc.getFile() = c.getBlock().getFile() and 
-				 // (jdc.getText().matches("%TODO%") or jdc.getText().matches("%FIXME%"))and 
-				 // //locContained(jdc.getLocation(), c.getLocation()))
-				 // startContained(jdc.getLocation().getStartLine(), jdc.getLocation().getStartColumn(), 
-				 // 	c.getLocation().getStartLine(), c.getLocation().getStartColumn()))
-where isBadCatch(c) 
 and not okEmptyCatch(c)
 select c, c.getFile(), c.getLocation()
